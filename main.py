@@ -23,34 +23,36 @@ def start(message):
 # Exel file uploading handler
 @bot.message_handler(content_types=['document'])
 def get_file(message):
-    markup2 = types.InlineKeyboardMarkup()
-    markup2.add(types.InlineKeyboardButton("Start game", callback_data='start_game'))
-    bot.reply_to(message, "Your words list uploaded successfully", reply_markup=markup2)
-    bot.get_file(message.document.file_id)
-    url = str(bot.get_file_url(message.document.file_id))
-    file_name = message.document.file_name
-    df = op.load_workbook(file_name)
-    data = df.active
-    print(url, file_name)
-    urlretrieve(url, file_name)
-    global total_rows
-    total_rows = data.max_row
-    global words, definitions
-    words = []
-    definitions = []
+    if message.document.mime_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":  # Checking file type
+        markup2 = types.InlineKeyboardMarkup()
+        markup2.add(types.InlineKeyboardButton("Start game", callback_data='start_game'))
+        bot.reply_to(message, "Your words list uploaded successfully", reply_markup=markup2)
+        bot.get_file(message.document.file_id)
+        url = str(bot.get_file_url(message.document.file_id))
+        file_name = message.document.file_name
+        print(message.document.mime_type)
+        urlretrieve(url, file_name)
+        df = op.load_workbook(file_name)
+        data = df.active
+        global total_rows
+        total_rows = data.max_row
+        global words, definitions
+        words = []
+        definitions = []
 
-    # Creating list with words
-    for row_number in range(3, total_rows + 1):
-        cell_obj = data.cell(row=row_number, column=1)
-        words.append(cell_obj.value)
-    print(words)
+        # Creating list with words
+        for row_number in range(3, total_rows + 1):
+            cell_obj = data.cell(row=row_number, column=1)
+            words.append(cell_obj.value)
+        print(words)
 
-    # Creating list with definitions
-    for row_number in range(3, total_rows + 1):
-        cell_obj = data.cell(row=row_number, column=3)
-        definitions.append(cell_obj.value)
-    print(definitions)
-
+        # Creating list with definitions
+        for row_number in range(3, total_rows + 1):
+            cell_obj = data.cell(row=row_number, column=3)
+            definitions.append(cell_obj.value)
+        print(definitions)
+    else:
+        bot.send_message(message.chat.id, "Not correct file format. Supposed *.xslx. Please try again.")
 
 # Choosing 4 random rows for game round
 def randomize(total_rows):
@@ -70,7 +72,7 @@ def send_question(callback):
     markup3.add(types.InlineKeyboardButton(f"{words[random_row_2]}", callback_data=str(random_row_2)))
     markup3.add(types.InlineKeyboardButton(f"{words[random_row_3]}", callback_data=str(random_row_3)))
     markup3.add(types.InlineKeyboardButton(f"{words[random_row_4]}", callback_data=str(random_row_4)))
-    bot.send_message(callback.message.chat.id, f'Choose the right word that best matches to this definition: <b>{definitions[random_row_main]}</b>', parse_mode='html', reply_markup=markup3)
+    bot.send_message(callback.message.chat.id, f'Choose the right word that best matches to this definition:<br> <b>{definitions[random_row_main]}</b>', parse_mode='html', reply_markup=markup3)
     print(random_row_1, random_row_2, random_row_3, random_row_4, random_row_main)
 
 

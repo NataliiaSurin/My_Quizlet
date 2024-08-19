@@ -3,6 +3,8 @@ import random
 import telebot
 from telebot import types
 from urllib.request import urlretrieve
+import os
+# os.remove("Courses.xlsx")
 
 TOKEN = "7379053950:AAEDhfRYutZmdcFxXMOut8ZjbSYmngudYSA"  # Token for Telegram Bot
 bot = telebot.TeleBot(TOKEN)
@@ -72,7 +74,11 @@ def send_question(callback):
     markup3.add(types.InlineKeyboardButton(f"{words[random_row_2]}", callback_data=str(random_row_2)))
     markup3.add(types.InlineKeyboardButton(f"{words[random_row_3]}", callback_data=str(random_row_3)))
     markup3.add(types.InlineKeyboardButton(f"{words[random_row_4]}", callback_data=str(random_row_4)))
-    bot.send_message(callback.message.chat.id, f'Choose the right word that best matches to this definition:<br> <b>{definitions[random_row_main]}</b>', parse_mode='html', reply_markup=markup3)
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    button_1 = types.KeyboardButton(text='Stop')
+    kb.add(button_1)
+    bot.send_message(callback.message.chat.id, f'Choose the right word that best matches to this definition:', reply_markup=kb)
+    bot.send_message(callback.message.chat.id, f'<b>{definitions[random_row_main]}</b>', parse_mode='html', reply_markup=markup3)
     print(random_row_1, random_row_2, random_row_3, random_row_4, random_row_main)
 
 

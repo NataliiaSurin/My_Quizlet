@@ -4,7 +4,7 @@ import telebot
 from telebot import types
 from urllib.request import urlretrieve
 import os
-# os.remove("Courses.xlsx")
+
 
 TOKEN = "7379053950:AAEDhfRYutZmdcFxXMOut8ZjbSYmngudYSA"  # Token for Telegram Bot
 bot = telebot.TeleBot(TOKEN)
@@ -17,9 +17,24 @@ global total_rows
 def start(message):
     user_id = message.from_user.id
     user_counters[user_id] = 0
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    button_1 = types.KeyboardButton(text='/stop')
+    button_2 = types.KeyboardButton(text='/start')
+    kb.row(button_1, button_2)
+    bot.send_message(message.chat.id,f'Hello, {message.from_user.first_name} :)', reply_markup=kb)
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("Go to the Cambridge dictionary website", url='https://dictionary.cambridge.org/plus/myWordlists'))
-    bot.send_message(message.chat.id, f'Hello, {message.from_user.first_name} ! Upload Exel file with your words list from Cambridge dictionary', reply_markup=markup)
+    bot.send_message(message.chat.id, f'Upload Exel file with your words list from Cambridge dictionary', reply_markup=markup)
+
+
+@bot.message_handler(commands=['stop'])
+def stop(message):
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    button = types.KeyboardButton(text='/start')
+    kb.row(button)
+    bot.send_message(message.chat.id, f'Your file deleted. Use /start comand to start new session', reply_markup=kb)
+    os.remove(file_name)
+
 
 
 # Exel file uploading handler
@@ -28,14 +43,15 @@ def get_file(message):
     if message.document.mime_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":  # Checking file type
         markup2 = types.InlineKeyboardMarkup()
         markup2.add(types.InlineKeyboardButton("Start game", callback_data='start_game'))
-        bot.reply_to(message, "Your words list uploaded successfully", reply_markup=markup2)
+        bot.reply_to(message, "Your words list uploaded successfully. Choose the right word that best matches to the definition.", reply_markup=markup2)
         bot.get_file(message.document.file_id)
         url = str(bot.get_file_url(message.document.file_id))
+        global file_name
         file_name = message.document.file_name
         urlretrieve(url, file_name)
         df = op.load_workbook(file_name)
         data = df.active
-        global total_rows
+        # global total_rows
         total_rows = data.max_row
         global words, definitions, index_list
         words = []
@@ -79,10 +95,6 @@ def send_question(callback):
     markup3.add(types.InlineKeyboardButton(f"{words[random_row_2]}", callback_data=str(random_row_2)))
     markup3.add(types.InlineKeyboardButton(f"{words[random_row_3]}", callback_data=str(random_row_3)))
     markup3.add(types.InlineKeyboardButton(f"{words[random_row_4]}", callback_data=str(random_row_4)))
-    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    button_1 = types.KeyboardButton(text='Stop')
-    kb.add(button_1)
-    bot.send_message(callback.message.chat.id, f'Choose the right word that best matches to this definition:', reply_markup=kb)
     bot.send_message(callback.message.chat.id, f'<b>{definitions[random_row_main]}</b>', parse_mode='html', reply_markup=markup3)
 
 
@@ -90,7 +102,6 @@ def send_question(callback):
 @bot.callback_query_handler(func=lambda callback: True)
 def callback_message(callback):
     user_id = callback.from_user.id
-    print(user_counters[user_id])
     if callback.data == 'start_game':
         send_question(callback)
         bot.answer_callback_query(callback.id)

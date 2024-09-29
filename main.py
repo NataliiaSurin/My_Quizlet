@@ -32,13 +32,12 @@ def get_file(message):
         bot.get_file(message.document.file_id)
         url = str(bot.get_file_url(message.document.file_id))
         file_name = message.document.file_name
-        print(message.document.mime_type)
         urlretrieve(url, file_name)
         df = op.load_workbook(file_name)
         data = df.active
         global total_rows
         total_rows = data.max_row
-        global words, definitions
+        global words, definitions, index_list
         words = []
         definitions = []
 
@@ -46,29 +45,35 @@ def get_file(message):
         for row_number in range(3, total_rows + 1):
             cell_obj = data.cell(row=row_number, column=1)
             words.append(cell_obj.value)
-        print(words)
+
+        index_list = list(range(len(words)))    # Creating list of indices
 
         # Creating list with definitions
         for row_number in range(3, total_rows + 1):
             cell_obj = data.cell(row=row_number, column=3)
             definitions.append(cell_obj.value)
-        print(definitions)
+
     else:
         bot.send_message(message.chat.id, "Not correct file format. Supposed *.xslx. Please try again.")
 
+
 # Choosing 4 random rows for game round
-def randomize(total_rows):
+def randomize(index_list):
     global random_row_1, random_row_2, random_row_3, random_row_4, random_row_main
-    random_row_1 = int(random.uniform(3, total_rows+1))
-    random_row_2 = int(random.uniform(3, total_rows+1))
-    random_row_3 = int(random.uniform(3, total_rows+1))
-    random_row_4 = int(random.uniform(3, total_rows+1))
-    random_row_main = int(random.choice([random_row_1, random_row_2, random_row_3, random_row_4]))
+    index_list_temporary = index_list.copy()  # Creating temporary list of indices
+    random_row_1 = random.choice(index_list_temporary)
+    index_list_temporary.remove(random_row_1)  # Removing of already chose index from temporary list of indices, so then they will not duplicate
+    random_row_2 = random.choice(index_list_temporary)
+    index_list_temporary.remove(random_row_2)
+    random_row_3 = random.choice(index_list_temporary)
+    index_list_temporary.remove(random_row_3)
+    random_row_4 = random.choice(index_list_temporary)
+    random_row_main = random.choice([random_row_1, random_row_2, random_row_3, random_row_4])
 
 
 # Function for creating new game round with 4 answer variants buttons
 def send_question(callback):
-    randomize(total_rows)
+    randomize(index_list)
     markup3 = types.InlineKeyboardMarkup()
     markup3.add(types.InlineKeyboardButton(f"{words[random_row_1]}", callback_data=str(random_row_1)))
     markup3.add(types.InlineKeyboardButton(f"{words[random_row_2]}", callback_data=str(random_row_2)))
@@ -79,7 +84,6 @@ def send_question(callback):
     kb.add(button_1)
     bot.send_message(callback.message.chat.id, f'Choose the right word that best matches to this definition:', reply_markup=kb)
     bot.send_message(callback.message.chat.id, f'<b>{definitions[random_row_main]}</b>', parse_mode='html', reply_markup=markup3)
-    print(random_row_1, random_row_2, random_row_3, random_row_4, random_row_main)
 
 
 # Analysis pressed buttons, checking for answer correctness, score counting
@@ -96,12 +100,12 @@ def callback_message(callback):
             user_counters[user_id] += 1  # Score counting
         print(f'Correct, you score now {user_counters[user_id]}')
         bot.answer_callback_query(callback.id)
-        bot.send_message(callback.message.chat.id, f'Correct, you score now {user_counters[user_id]}')
+        bot.send_message(callback.message.chat.id, f'<b>Correct</b>, you score now <b>{user_counters[user_id]}</b>', parse_mode='html')
         send_question(callback)
     else:
         print(f'Wrong, you score now {user_counters[user_id]}')
         bot.answer_callback_query(callback.id)
-        bot.send_message(callback.message.chat.id, f'Wrong, you score now {user_counters[user_id]}')
+        bot.send_message(callback.message.chat.id, f'<b>Wrong</b>, you score now <b>{user_counters[user_id]}</b>', parse_mode='html')
         send_question(callback)
 
 
